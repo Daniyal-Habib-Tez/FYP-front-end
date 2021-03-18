@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { makeStyles } from '@material-ui/core/styles'
 import Card from '@material-ui/core/Card'
 import CardActions from '@material-ui/core/CardActions'
@@ -23,6 +23,8 @@ import {
 import { useHistory } from 'react-router'
 import styles from 'assets/jss/material-dashboard-react/views/dashboardStyle.js'
 import { IndeterminateCheckBoxOutlined } from '@material-ui/icons'
+import { createFalse } from 'typescript'
+import Dropzone, { useDropzone } from 'react-dropzone'
 
 const useStyles = makeStyles(styles)
 
@@ -37,9 +39,14 @@ const Choice = () => {
   const [prediction, setPrediction] = useState()
   const [open, setOpen] = useState(false)
   const [openProject, setOpenProject] = useState(false)
+  const [openModal, setOpenModal] = useState(false)
+  const [openTimeSeries, setTimeSeries] = useState(false)
+
+  const [openCluster, setCluster] = useState(false)
   const [project, setProject] = useState({})
   const [projectName, setProjectName] = useState('')
   const [categories, setCategories] = useState(['', ''])
+  const [file, setFile] = useState([])
   const [msg, setMsg] = useState({
     content: '',
     type: '',
@@ -70,12 +77,24 @@ const Choice = () => {
   const handleOpenProject = () => {
     setOpenProject(true)
   }
+  const handleOpenModal = () => {
+    setOpenModal(true)
+  }
+  const handleOpenTime = () => {
+    setTimeSeries(true)
+  }
+  const handleOpenCluster = () => {
+    setCluster(true)
+  }
 
   const handleCloseProject = () => {
     setOpenProject(false)
     setPredicting(false)
     setProjectName('')
     setCategories('')
+    setOpenModal(false)
+    setTimeSeries(false)
+    setCluster(false)
   }
 
   const getProjects = () => {
@@ -123,152 +142,6 @@ const Choice = () => {
       })
       .catch((err) => {
         setLoading(false)
-        setMsg({
-          content: err.message,
-          type: 'error',
-        })
-      })
-  }
-
-  const deleteProject = (project) => {
-    fetch('http://localhost:5000/api/delete_project', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        project_name: project,
-      }),
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.status == 200) {
-          getProjects()
-          if (user.isAdmin) {
-            getEmptyProjects()
-          }
-          setMsg({
-            content: res.message,
-            type: 'success',
-          })
-        } else {
-          throw new Error(res.message)
-        }
-      })
-      .catch((err) => {
-        setMsg({
-          content: err.message,
-          type: 'error',
-        })
-      })
-  }
-  const trainProject = (project) => {
-    const cats = [
-      project?.categories[0].category_name,
-      project?.categories[1].category_name,
-    ]
-    console.log(cats, {
-      project_name: project.project_name,
-      category1: cats.sort()[0],
-      category2: cats.sort()[1],
-    })
-    fetch('http://localhost:5000/api/train', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        project_name: project.project_name,
-        category1: cats.sort()[0],
-        category2: cats.sort()[1],
-      }),
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        if (res.status == 200) {
-          getProjects()
-          getEmptyProjects()
-          setMsg({
-            content: res.message,
-            type: 'success',
-          })
-        } else {
-          throw new Error(res.message)
-        }
-      })
-      .catch((err) => {
-        setMsg({
-          content: err.message,
-          type: 'error',
-        })
-      })
-  }
-
-  const onDrop = (picture) => {
-    setPictures(picture)
-  }
-
-  const upload = () => {
-    setPredicting(true)
-    const URL = 'https://api.cloudinary.com/v1_1/n4beel/image/upload'
-    const PRESET = 'c5lwhjac'
-    const data = new FormData()
-
-    data.append('file', pictures[0])
-    data.append('upload_preset', PRESET)
-
-    fetch(URL, {
-      method: 'POST',
-      body: data,
-    })
-      .then((response) => response.json())
-      .then((result) => {
-        console.log('Success:', result.url)
-        predict(result.url)
-      })
-      .catch((err) => {
-        setPredicting(false)
-        console.log(err)
-      })
-  }
-
-  const predict = (url) => {
-    console.log(
-      'categories',
-      project?.categories.sort()[0],
-      project?.categories.sort()[1]
-    )
-
-    fetch('http://localhost:5000/api/predict', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url,
-        project_name: project.project_name,
-        category1: project?.categories.sort()[0],
-        category2: project?.categories.sort()[1],
-      }),
-    })
-      .then((res) => res.json())
-      .then((res) => {
-        console.log('response', res)
-        if (res.status == 200) {
-          setPredicting(false)
-          setPrediction(res['Predicted Category'])
-          setMsg({
-            content: res.message,
-            type: 'success',
-          })
-        } else {
-          throw new Error(res.message)
-        }
-      })
-      .catch((err) => {
-        setPredicting(false)
-        console.log('error', err)
-
         setMsg({
           content: err.message,
           type: 'error',
@@ -348,13 +221,43 @@ const Choice = () => {
         })
       })
   }
-  const moveToRegression = () => {
-    history.push()
+  let uploadedFiles = []
+  let errorMsg = ''
+
+  const readFile = () => {
+    if (!uploadedFiles[0]) {
+      errorMsg = 'Please select a file first'
+    } else {
+      errorMsg = ''
+      var reader = new FileReader()
+      reader.readAsText(uploadedFiles[0])
+      reader.onload = () => {
+        // extractHeader(reader)
+      }
+    }
   }
-  const moveToTimeseries = () => {
-    history.push()
+  // const extractHeader = (reader) => {
+  //   labelsArray = []
+  //   targetsArray = []
+
+  //   const lines = reader.result.split('\n').map((line) => line.split(','))
+  //   lines[0].forEach((item) => {
+  //     labelsArray.push({
+  //       name: item,
+  //       value: item + '1',
+  //     })
+  //     targetsArray.push({
+  //       name: item,
+  //       value: item,
+  //     })
+  //   })
+  // }
+  const onDrop = (acceptedFiles) => {
+    console.log(acceptedFiles)
   }
-  const moveToClustering = () => {}
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+  })
 
   const classes = useStyles()
   const bull = <span className={classes.bullet}>•</span>
@@ -423,8 +326,8 @@ const Choice = () => {
               height: 'calc(100% - 30px)',
               cursor: 'pointer',
             }}
-            // onClick={() => history.push("/admin/project")}
-            onClick={moveToRegression}
+            //onClick={() => history.push('/admin/dashboard')}
+            onClick={handleOpenModal}
           >
             <CardBody
               style={{
@@ -448,8 +351,7 @@ const Choice = () => {
               height: 'calc(100% - 30px)',
               cursor: 'pointer',
             }}
-            // onClick={() => history.push("/admin/project")}
-            onClick={moveToTimeseries}
+            onClick={handleOpenTime}
           >
             <CardBody
               style={{
@@ -473,8 +375,7 @@ const Choice = () => {
               height: 'calc(100% - 30px)',
               cursor: 'pointer',
             }}
-            // onClick={() => history.push("/admin/project")}
-            onClick={moveToClustering}
+            onClick={handleOpenCluster}
           >
             <CardBody
               style={{
@@ -493,73 +394,6 @@ const Choice = () => {
           </Card>
         </GridItem>
       </Grid>
-      <Modal
-        aria-labelledby='transition-modal-title'
-        aria-describedby='transition-modal-description'
-        className={classes.modal}
-        open={open}
-        onClose={handleClose}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{
-          timeout: 500,
-        }}
-      >
-        <Fade in={open}>
-          {prediction ? (
-            <Box boxShadow={3} className={classes.paper}>
-              <h2 id='transition-modal-title'>Prediction</h2>
-              <p
-                id='transition-modal-description'
-                style={{
-                  fontWeight: 600,
-                  textAlign: 'center',
-                  fontSize: 20,
-                  padding: '20px 0',
-                }}
-              >
-                {prediction}
-              </p>
-              <Button
-                type='button'
-                fullWidth
-                variant='contained'
-                color='primary'
-                onClick={() => setPrediction()}
-              >
-                Predict Again
-              </Button>
-            </Box>
-          ) : (
-            <Box boxShadow={3} className={classes.paper}>
-              <h2 id='transition-modal-title'>Prediction</h2>
-              {/* <p id="transition-modal-description">{JSON.stringify(project)}</p> */}
-              <ImageUploader
-                withIcon={true}
-                buttonText={
-                  pictures[0] && pictures[0].name
-                    ? pictures[0].name
-                    : 'Choose an image'
-                }
-                onChange={onDrop}
-                imgExtension={['.jpg', '.jpeg']}
-                maxFileSize={5242880}
-              />
-
-              <Button
-                type='button'
-                fullWidth
-                variant='contained'
-                color='primary'
-                onClick={upload}
-                disabled={pictures.length <= 0 || predicting}
-              >
-                {predicting ? <CircularProgress size={24} /> : 'Predict'}
-              </Button>
-            </Box>
-          )}
-        </Fade>
-      </Modal>
 
       <Modal
         aria-labelledby='transition-modal-title'
@@ -574,7 +408,11 @@ const Choice = () => {
         }}
       >
         <Fade in={openProject}>
-          <Box boxShadow={3} className={classes.paper}>
+          <Box
+            boxShadow={3}
+            className={classes.paper}
+            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+          >
             <h2 id='transition-modal-title'>Create Project</h2>
             <Grid container spacing={2} style={{ marginBottom: 10 }}>
               <Grid item xs={12}>
@@ -684,6 +522,167 @@ const Choice = () => {
                 </Button>
               </Grid>
             </Grid>
+          </Box>
+        </Fade>
+      </Modal>
+      <Modal
+        aria-labelledby='transition-modal-title'
+        aria-describedby='transition-modal-description'
+        className={classes.modal}
+        open={openModal}
+        onClose={handleCloseProject}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={openModal}>
+          <Box
+            boxShadow={3}
+            className={classes.paper}
+            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+          >
+            <h2 id='transition-modal-title'>Enter a CSV OR XLSX</h2>
+            <Grid item xs={12}>
+              <Card style={{ marginBottom: 0, cursor: 'pointer' }}>
+                <section className='container'>
+                  <Dropzone
+                    maxFiles={1}
+                    onDrop={(acceptedFiles) => onDrop(acceptedFiles)}
+                  >
+                    {({ getRootProps, getInputProps }) => (
+                      <section style={{ border: 'solid', marginBottom: '5px' }}>
+                        <div {...getRootProps()}>
+                          <input {...getInputProps()} />
+                          <p>
+                            Drag 'n' drop some files here, or click to select
+                            files
+                          </p>
+                        </div>
+                      </section>
+                    )}
+                  </Dropzone>
+                </section>
+              </Card>
+            </Grid>
+            <Button
+              type='button'
+              fullWidth
+              variant='contained'
+              color='primary'
+              onClick={readFile}
+            >
+              {predicting ? <CircularProgress size={24} /> : 'Upload'}
+            </Button>
+          </Box>
+        </Fade>
+      </Modal>
+      <Modal
+        aria-labelledby='transition-modal-title'
+        aria-describedby='transition-modal-description'
+        className={classes.modal}
+        open={openTimeSeries}
+        onClose={handleCloseProject}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={openTimeSeries}>
+          <Box
+            boxShadow={3}
+            className={classes.paper}
+            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+          >
+            <h2 id='transition-modal-title'>Enter a CSV or XLSX</h2>
+            <Grid item xs={12}>
+              <Card style={{ marginBottom: 0, cursor: 'pointer' }}>
+                <section className='container'>
+                  <Dropzone
+                    maxFiles={1}
+                    onDrop={(acceptedFiles) => onDrop(acceptedFiles)}
+                  >
+                    {({ getRootProps, getInputProps }) => (
+                      <section style={{ border: 'solid', marginBottom: '5px' }}>
+                        <div {...getRootProps()}>
+                          <input {...getInputProps()} />
+                          <p>
+                            Drag 'n' drop some files here, or click to select
+                            files
+                          </p>
+                        </div>
+                      </section>
+                    )}
+                  </Dropzone>
+                </section>
+              </Card>
+            </Grid>
+            <Button
+              type='button'
+              fullWidth
+              variant='contained'
+              color='primary'
+              //onClick={}
+            >
+              {predicting ? <CircularProgress size={24} /> : 'Upload'}
+            </Button>
+          </Box>
+        </Fade>
+      </Modal>
+      <Modal
+        aria-labelledby='transition-modal-title'
+        aria-describedby='transition-modal-description'
+        className={classes.modal}
+        open={openCluster}
+        onClose={handleCloseProject}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+        }}
+      >
+        <Fade in={openCluster}>
+          <Box
+            boxShadow={3}
+            className={classes.paper}
+            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+          >
+            <h2 id='transition-modal-title'>
+              Enter multiple images for clusterring
+            </h2>
+            <Grid item xs={12}>
+              <Card style={{ marginBottom: 0, cursor: 'pointer' }}>
+                <section className='container'>
+                  <Dropzone
+                    maxFiles={1}
+                    onDrop={(acceptedFiles) => onDrop(acceptedFiles)}
+                  >
+                    {({ getRootProps, getInputProps }) => (
+                      <section style={{ border: 'solid', marginBottom: '5px' }}>
+                        <div {...getRootProps()}>
+                          <input {...getInputProps()} />
+                          <p>
+                            Drag 'n' drop some images here, or click to select
+                            images
+                          </p>
+                        </div>
+                      </section>
+                    )}
+                  </Dropzone>
+                </section>
+              </Card>
+            </Grid>
+            <Button
+              type='button'
+              fullWidth
+              variant='contained'
+              color='primary'
+              //onClick={}
+            >
+              {predicting ? <CircularProgress size={24} /> : 'Upload'}
+            </Button>
           </Box>
         </Fade>
       </Modal>
