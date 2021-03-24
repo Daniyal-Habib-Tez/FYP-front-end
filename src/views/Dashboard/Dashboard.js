@@ -292,29 +292,32 @@ export default function Dashboard() {
   const onChange = (e) => {
     if (e.target.name === 'projectName') {
       setProjectName(e.target.value)
-    } else if (e.target.name === 'categoryOne') {
-      const newArr = categories
-      newArr[0] = e.target.value
-      setCategories(newArr)
-    } else if (e.target.name === 'categoryTwo') {
-      const newArr = categories
-      newArr[1] = e.target.value
-      setCategories(newArr)
     }
+  }
+  const onChangeClass = (e, index) => {
+    console.log(e.target.value, index)
+    const newArr = categories
+    newArr[index] = e.target.value
+    setCategories(newArr)
+  }
+
+  const onDelete = (index) => {
+    const newArr = [...categories]
+    newArr.splice(index, 1)
+    setCategories(newArr)
   }
 
   const createProject = () => {
     console.log('categories', projectName, categories.sort())
 
-    fetch('http://localhost:5000/api/create_project', {
+    fetch('http://localhost:5000/api/create_multiclass_project', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         project_name: projectName,
-        category_one: categories.sort()[0],
-        category_two: categories.sort()[1],
+        project_class_list: categories.sort(),
       }),
     })
       .then((res) => res.json())
@@ -326,10 +329,9 @@ export default function Dashboard() {
             pathname: '/admin/project',
             state: {
               project_name: projectName,
-              categories: [
-                { category_name: categories.sort()[0], statue: false },
-                { category_name: categories.sort()[1], statue: false },
-              ],
+              categories: categories
+                .sort()
+                .map((cat) => ({ category_name: cat, status: false })),
             },
           })
           setMsg({
@@ -371,8 +373,8 @@ export default function Dashboard() {
                 cursor: 'pointer',
               }}
               // onClick={() => history.push("/admin/project")}
-              //onClick={handleOpenProject}
-              onClick={() => history.push('/choice')}
+              onClick={handleOpenProject}
+              //onClick={() => history.push('/choice')}
             >
               <CardBody
                 style={{
@@ -602,7 +604,11 @@ export default function Dashboard() {
         }}
       >
         <Fade in={openProject}>
-          <Box boxShadow={3} className={classes.paper}>
+          <Box
+            boxShadow={3}
+            className={classes.paper}
+            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+          >
             <h2 id='transition-modal-title'>Create Project</h2>
             <Grid container spacing={2} style={{ marginBottom: 10 }}>
               <Grid item xs={12}>
@@ -614,40 +620,86 @@ export default function Dashboard() {
                   onChange={onChange}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12}>
                 <TextField
-                  label='First Category'
+                  label={`Class 1`}
                   variant='outlined'
                   style={{ width: '100%' }}
-                  name='categoryOne'
-                  onChange={onChange}
+                  name={`category1`}
+                  onChange={(val) => onChangeClass(val, 0)}
                 />
               </Grid>
-              <Grid item xs={6}>
+              <Grid item xs={12}>
                 <TextField
-                  label='Second Category'
+                  label={`Class 2`}
                   variant='outlined'
                   style={{ width: '100%' }}
-                  name='categoryTwo'
-                  onChange={onChange}
+                  name={`category2`}
+                  onChange={(val) => onChangeClass(val, 1)}
                 />
+              </Grid>
+              {categories &&
+                categories.map((cat, ind) => {
+                  return ind < 2 ? null : ind === categories.length - 1 ? (
+                    <>
+                      <Grid item xs={10}>
+                        <TextField
+                          label={`Class ${ind + 1}`}
+                          variant='outlined'
+                          style={{ width: '100%' }}
+                          name={`category${ind + 1}`}
+                          onChange={(val) => onChangeClass(val, ind)}
+                        />
+                      </Grid>
+                      <Grid item xs={2}>
+                        <Button
+                          type='button'
+                          fullWidth
+                          variant='contained'
+                          color='danger'
+                          onClick={() => onDelete(ind)}
+                        >
+                          <DeleteIcon />
+                        </Button>
+                      </Grid>
+                    </>
+                  ) : (
+                    <Grid item xs={12}>
+                      <TextField
+                        label={`Class ${ind + 1}`}
+                        variant='outlined'
+                        style={{ width: '100%' }}
+                        name={`category${ind + 1}`}
+                        onChange={(val) => onChangeClass(val, ind)}
+                      />
+                    </Grid>
+                  )
+                })}
+              <Grid item xs={6}>
+                <Button
+                  type='button'
+                  fullWidth
+                  variant='contained'
+                  color='primary'
+                  onClick={() => {
+                    setCategories([...categories, ''])
+                  }}
+                >
+                  {predicting ? <CircularProgress size={24} /> : 'Add Class'}
+                </Button>
+              </Grid>
+              <Grid item xs={6}>
+                <Button
+                  type='button'
+                  fullWidth
+                  variant='contained'
+                  color='primary'
+                  onClick={createProject}
+                >
+                  {predicting ? <CircularProgress size={24} /> : 'Create'}
+                </Button>
               </Grid>
             </Grid>
-            <Button
-              type='button'
-              fullWidth
-              variant='contained'
-              color='primary'
-              onClick={createProject}
-              // disabled={
-              //   projectName.length == 0 ||
-              //   categories[0] === "" ||
-              //   categories[1] === "" ||
-              //   predicting
-              // }
-            >
-              {predicting ? <CircularProgress size={24} /> : 'Create'}
-            </Button>
           </Box>
         </Fade>
       </Modal>

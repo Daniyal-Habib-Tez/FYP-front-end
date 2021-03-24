@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState } from 'react'
 import { makeStyles } from '@material-ui/core/styles'
 import Card from '@material-ui/core/Card'
 import CardActions from '@material-ui/core/CardActions'
@@ -7,76 +7,73 @@ import Grid from '@material-ui/core/Grid'
 import AddIcon from '@material-ui/icons/Add'
 import CardBody from 'components/Card/CardBody'
 import GridItem from 'components/Grid/GridItem.js'
-import DeleteIcon from '@material-ui/icons/Delete'
-import ImageUploader from 'react-images-upload'
-
 import {
   Backdrop,
   Box,
   CircularProgress,
   Container,
   Fade,
-  IconButton,
   Modal,
-  TextField,
 } from '@material-ui/core'
 import { useHistory } from 'react-router'
 import styles from 'assets/jss/material-dashboard-react/views/dashboardStyle.js'
-import { IndeterminateCheckBoxOutlined } from '@material-ui/icons'
-import { createFalse } from 'typescript'
 import Dropzone, { useDropzone } from 'react-dropzone'
+import { useEffect } from 'react'
 
 const useStyles = makeStyles(styles)
 
 const Choice = () => {
   const history = useHistory()
-  const [user, setUser] = useState()
-  const [projects, setProjects] = useState([])
-  const [emptyProjects, setEmptyProjects] = useState([])
-  const [loading, setLoading] = useState(false)
+
   const [pictures, setPictures] = useState([])
   const [predicting, setPredicting] = useState(false)
+  const [loader, setLoader] = useState(true)
+  const [columnList, setColumnList] = useState([])
+  const [algorithms, setAlgorithm] = useState([])
   const [prediction, setPrediction] = useState()
   const [open, setOpen] = useState(false)
   const [openProject, setOpenProject] = useState(false)
   const [openModal, setOpenModal] = useState(false)
   const [openTimeSeries, setTimeSeries] = useState(false)
-
   const [openCluster, setCluster] = useState(false)
   const [project, setProject] = useState({})
   const [projectName, setProjectName] = useState('')
   const [categories, setCategories] = useState(['', ''])
-  const [file, setFile] = useState([])
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [labelsArray, setLabelsArray] = useState([])
+  const [targetsArray, setTargetsArray] = useState([])
+  const [targetSel, setTargetSel] = useState('')
+  const [selectedLabelsArray, setSelectedLabelsArray] = useState([])
+  const [result, setResult] = useState([])
+  const [algoSelected, setAlgoSel] = useState([])
+  const [colValue, setColValue] = useState([])
+
   const [msg, setMsg] = useState({
     content: '',
     type: '',
   })
 
+  const fileUploader = (e) => {
+    console.log('file uploader input', e.target.files[0])
+    setSelectedFile(e.target.files)
+  }
+
+  const targetS = (e) => {
+    console.log('target selected item', e.target.value, typeof e.target.value)
+    setTargetSel(e.target.value)
+  }
+  const algoSel = (e) => {
+    console.log('algo selected ', e.target.value, typeof e.target.value)
+    setAlgoSel(e.target.value)
+  }
+  const colVal = (e, index) => {
+    console.log('col k andar ka string', e.target.value, index)
+    setColValue(e.target.value, index)
+  }
+
   useEffect(() => {
-    const userData = localStorage.getItem('user')
-    setUser(JSON.parse(userData))
-    getProjects()
-    if (JSON.parse(userData).isAdmin) {
-      getEmptyProjects()
-    }
-  }, [])
-
-  const handleOpen = (project) => {
-    setProject(project)
-    setOpen(true)
-  }
-
-  const handleClose = () => {
-    setOpen(false)
-    setProject({})
-    setPictures([])
-    setPrediction()
-    setPredicting(false)
-  }
-
-  const handleOpenProject = () => {
-    setOpenProject(true)
-  }
+    console.log('hello', targetSel)
+  }, [targetSel])
   const handleOpenModal = () => {
     setOpenModal(true)
   }
@@ -97,122 +94,100 @@ const Choice = () => {
     setCluster(false)
   }
 
-  const getProjects = () => {
-    setLoading(true)
-    fetch('http://localhost:5000/api/get_Projects')
-      .then((res) => res.json())
-      .then((res) => {
-        setLoading(false)
-        if (res.status == 200) {
-          console.log('data', res)
-          setProjects(res.projects)
-          setMsg({
-            content: res.message,
-            type: 'success',
-          })
-        } else {
-          throw new Error(res.message)
-        }
-      })
-      .catch((err) => {
-        setLoading(false)
-        setMsg({
-          content: err.message,
-          type: 'error',
-        })
-      })
-  }
+  let errorMsg = ''
 
-  const getEmptyProjects = () => {
-    setLoading(true)
-    fetch('http://localhost:5000/api/get_empty_Projects')
-      .then((res) => res.json())
-      .then((res) => {
-        setLoading(false)
-        if (res.status == 200) {
-          console.log('empty data', res)
-          setEmptyProjects(res.missing_data_projects)
-          setMsg({
-            content: res.message,
-            type: 'success',
-          })
-        } else {
-          throw new Error(res.message)
-        }
-      })
-      .catch((err) => {
-        setLoading(false)
-        setMsg({
-          content: err.message,
-          type: 'error',
-        })
-      })
-  }
-
-  const onChange = (e) => {
-    if (e.target.name === 'projectName') {
-      setProjectName(e.target.value)
+  const readFile = (e) => {
+    e.preventDefault()
+    if (!selectedFile[0]) {
+      errorMsg = 'Please select a file first'
+    } else {
+      errorMsg = ''
+      var reader = new FileReader()
+      reader.readAsText(selectedFile[0])
+      reader.onload = () => {
+        extractHeader(reader)
+      }
     }
-    // else if (e.target.name === 'categoryOne') {
-    //   const newArr = categories
-    //   newArr[0] = e.target.value
-    //   setCategories(newArr)
-    // } else if (e.target.name === 'categoryTwo') {
-    //   const newArr = categories
-    //   newArr[1] = e.target.value
-    //   setCategories(newArr)
-    // }
   }
-  const onChangeClass = (e, index) => {
-    console.log(e.target.value, index)
-    const newArr = categories
-    newArr[index] = e.target.value
-    setCategories(newArr)
-  }
-
-  const onDelete = (index) => {
-    const newArr = [...categories]
-    newArr.splice(index, 1)
-    setCategories(newArr)
-  }
-
-  const createProject = () => {
-    console.log('categories', projectName, categories.sort())
-
-    fetch('http://localhost:5000/api/create_multiclass_project', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        project_name: projectName,
-        project_class_list: categories.sort(),
-      }),
+  const extractHeader = (reader) => {
+    let labels = []
+    let targets = []
+    const lines = reader.result.split('\n').map((line) => line.split(','))
+    lines[0].forEach((item) => {
+      labels.push({
+        name: item,
+        value: item + '1',
+      })
+      targets.push({
+        name: item,
+        value: item,
+      })
     })
-      .then((res) => res.json())
-      .then((res) => {
-        console.log('response', res)
-        if (res.status == 200) {
-          setPredicting(false)
-          history.push({
-            pathname: '/admin/project',
-            state: {
-              project_name: projectName,
-              categories: categories
-                .sort()
-                .map((cat) => ({ category_name: cat, status: false })),
-            },
-          })
-          setMsg({
-            content: res.message,
-            type: 'success',
-          })
-        } else {
-          throw new Error(res.message)
-        }
+    setLabelsArray(labels)
+    setTargetsArray(targets)
+  }
+  const labelSelect = (item) => {
+    console.log('chlrha yahan tk')
+    let selectedArray = selectedLabelsArray
+    let target = []
+    let tar = []
+    console.log('selectedarray', selectedArray)
+    if (!selectedArray.includes(item.name)) {
+      console.log('not present')
+      selectedArray.push(item.name.trim())
+      target = targetsArray.filter((obj) => obj.name !== item.name)
+      setTargetsArray(target)
+      if (item.name === tar) {
+        tar = ''
+      }
+    } else {
+      console.log('present')
+      selectedArray.splice(selectedArray.indexOf(item.name), 1)
+      target = targetsArray
+      target.push({
+        name: item.name,
+        value: item.name,
+      })
+      console.log('splice', target)
+      setTargetsArray(target)
+    }
+    console.log('yh hai targets array', targetsArray)
+    setTargetSel(tar)
+    setSelectedLabelsArray(selectedArray)
+
+    console.log(
+      'selectedArray, target, selected target',
+      selectedArray,
+      target,
+      targetSel
+    )
+  }
+  const submitForm = async (e) => {
+    e.preventDefault()
+    console.log('clicked')
+    console.log(selectedFile, selectedLabelsArray, targetSel, typeof targetSel)
+    let formData = new FormData()
+    formData.append('file', selectedFile[0])
+    formData.append(
+      'json',
+      JSON.stringify({
+        drop: selectedLabelsArray,
+        target: targetSel.trim(),
+      })
+    )
+    formData.forEach((abc) => console.log(abc))
+    fetch('http://localhost:8000/api/data_reg', {
+      method: 'POST',
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        console.log('agaya response ', result)
+        setResult(result)
+        getAlgosreg(result)
+        console.log('alogsWalaFunction')
       })
       .catch((err) => {
-        setPredicting(false)
         console.log('error', err)
 
         setMsg({
@@ -221,37 +196,76 @@ const Choice = () => {
         })
       })
   }
-  let uploadedFiles = []
-  let errorMsg = ''
+  const getAlgosreg = (response) => {
+    let columnList = []
+    let algorithmList = []
 
-  const readFile = () => {
-    if (!uploadedFiles[0]) {
-      errorMsg = 'Please select a file first'
+    console.log(response)
+    setLoader(false)
+    columnList = response['column_name']
+    delete response['column_name']
+    for (let algo in response) {
+      algorithmList.push({
+        name: algo,
+        success: response[algo][0],
+        error: response[algo][1],
+      })
+    }
+    console.log('columnList', columnList)
+    console.log('algoList', algorithmList)
+    setColumnList(columnList)
+    setAlgorithm(algorithmList)
+  }
+  const predictReg = () => {
+    console.log('prediction start')
+    let model = algoSelected
+    if (!model) {
+      setMsg({
+        content: 'Please select a model first',
+        type: 'error',
+      })
     } else {
-      errorMsg = ''
-      var reader = new FileReader()
-      reader.readAsText(uploadedFiles[0])
-      reader.onload = () => {
-        // extractHeader(reader)
+      let columns = {}
+      let i = 0
+      for (let c of columnList) {
+        columns[c] = isNaN(colValue[i]) ? colValue[i] : parseFloat(colValue[i])
+        i++
       }
+      for (let co in columns) {
+        if (columns[co] === undefined || columns[co] === '') {
+          setMsg({
+            content: 'All Input Parameters are required.',
+            type: 'error',
+          })
+          return
+        }
+      }
+
+      let data = {
+        model,
+        columns,
+      }
+      fetch('http://localhost:8000/api/prediction', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      })
+        .then((response) => response.json())
+        .then((result) => {
+          console.log('agaya response ', result)
+          setResult(result)
+          console.log('Prediction wala function')
+        })
+        .catch((err) => {
+          console.log('error', err)
+
+          setMsg({
+            content: err.message,
+            type: 'error',
+          })
+        })
     }
   }
-  // const extractHeader = (reader) => {
-  //   labelsArray = []
-  //   targetsArray = []
 
-  //   const lines = reader.result.split('\n').map((line) => line.split(','))
-  //   lines[0].forEach((item) => {
-  //     labelsArray.push({
-  //       name: item,
-  //       value: item + '1',
-  //     })
-  //     targetsArray.push({
-  //       name: item,
-  //       value: item,
-  //     })
-  //   })
-  // }
   const onDrop = (acceptedFiles) => {
     console.log(acceptedFiles)
   }
@@ -260,26 +274,30 @@ const Choice = () => {
   })
 
   const classes = useStyles()
-  const bull = <span className={classes.bullet}>•</span>
   return (
     <div className='choice'>
       <Container
         maxWidth='lg'
         component='div'
         style={{ display: 'flex', flexWrap: 'wrap' }}
-      ></Container>
-      <p
-        style={{
-          position: 'absolute',
-          top: 6,
-          right: 124,
-          cursor: 'pointer',
-          zIndex: 100000000,
-        }}
-        onClick={() => history.push('/admin')}
       >
-        Home
-      </p>
+        {/* <GridContainer> */}
+        <p className={classes.pagename}> Category Predictor </p>
+      </Container>
+      <Button
+        style={{ position: 'absolute', top: 8, right: 124 }}
+        color={'transparent'}
+        justIcon={false}
+        simple={false}
+        aria-label='Dashboard'
+        className={classes.buttonLink}
+        onClick={() => {
+          localStorage.removeItem('user')
+          history.push('/auth/signin')
+        }}
+      >
+        Logout
+      </Button>
       <Grid
         style={{
           height: '100vh',
@@ -299,8 +317,8 @@ const Choice = () => {
               height: 'calc(100% - 30px)',
               cursor: 'pointer',
             }}
-            // onClick={() => history.push("/admin/project")}
-            onClick={handleOpenProject}
+            onClick={() => history.push('/admin/dashboard')}
+            //onClick={handleOpenProject}
           >
             <CardBody
               style={{
@@ -326,7 +344,7 @@ const Choice = () => {
               height: 'calc(100% - 30px)',
               cursor: 'pointer',
             }}
-            //onClick={() => history.push('/admin/dashboard')}
+            // onClick={() => history.push('/admin/dashboard')}
             onClick={handleOpenModal}
           >
             <CardBody
@@ -394,137 +412,6 @@ const Choice = () => {
           </Card>
         </GridItem>
       </Grid>
-
-      <Modal
-        aria-labelledby='transition-modal-title'
-        aria-describedby='transition-modal-description'
-        className={classes.modal}
-        open={openProject}
-        onClose={handleCloseProject}
-        closeAfterTransition
-        BackdropComponent={Backdrop}
-        BackdropProps={{
-          timeout: 500,
-        }}
-      >
-        <Fade in={openProject}>
-          <Box
-            boxShadow={3}
-            className={classes.paper}
-            style={{ maxHeight: '65vh', overflowY: 'auto' }}
-          >
-            <h2 id='transition-modal-title'>Create Project</h2>
-            <Grid container spacing={2} style={{ marginBottom: 10 }}>
-              <Grid item xs={12}>
-                <TextField
-                  label='Project Name'
-                  variant='outlined'
-                  style={{ width: '100%' }}
-                  name='projectName'
-                  onChange={onChange}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label={`Class 1`}
-                  variant='outlined'
-                  style={{ width: '100%' }}
-                  name={`category1`}
-                  onChange={(val) => onChangeClass(val, 0)}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label={`Class 2`}
-                  variant='outlined'
-                  style={{ width: '100%' }}
-                  name={`category2`}
-                  onChange={(val) => onChangeClass(val, 1)}
-                />
-              </Grid>
-              {categories &&
-                categories.map((cat, ind) => {
-                  return ind < 2 ? null : ind === categories.length - 1 ? (
-                    <>
-                      <Grid item xs={10}>
-                        <TextField
-                          label={`Class ${ind + 1}`}
-                          variant='outlined'
-                          style={{ width: '100%' }}
-                          name={`category${ind + 1}`}
-                          onChange={(val) => onChangeClass(val, ind)}
-                        />
-                      </Grid>
-                      <Grid item xs={2}>
-                        <Button
-                          type='button'
-                          fullWidth
-                          variant='contained'
-                          color='danger'
-                          onClick={() => onDelete(ind)}
-                          // disabled={
-                          //   projectName.length == 0 ||
-                          //   categories[0] === "" ||
-                          //   categories[1] === "" ||
-                          //   predicting
-                          // }
-                        >
-                          <DeleteIcon />
-                        </Button>
-                      </Grid>
-                    </>
-                  ) : (
-                    <Grid item xs={12}>
-                      <TextField
-                        label={`Class ${ind + 1}`}
-                        variant='outlined'
-                        style={{ width: '100%' }}
-                        name={`category${ind + 1}`}
-                        onChange={(val) => onChangeClass(val, ind)}
-                      />
-                    </Grid>
-                  )
-                })}
-              <Grid item xs={6}>
-                <Button
-                  type='button'
-                  fullWidth
-                  variant='contained'
-                  color='primary'
-                  onClick={() => {
-                    setCategories([...categories, ''])
-                  }}
-                  // disabled={
-                  //   projectName.length == 0 ||
-                  //   categories[0] === "" ||
-                  //   categories[1] === "" ||
-                  //   predicting
-                  // }
-                >
-                  {predicting ? <CircularProgress size={24} /> : 'Add Class'}
-                </Button>
-              </Grid>
-              <Grid item xs={6}>
-                <Button
-                  type='button'
-                  fullWidth
-                  variant='contained'
-                  color='primary'
-                  onClick={createProject}
-                  // disabled={
-                  //   projectName.length == 0 ||
-                  //   categories[0] === "" ||
-                  //   categories[1] === "" ||
-                  //   predicting
-                  // }
-                >
-                  {predicting ? <CircularProgress size={24} /> : 'Create'}
-                </Button>
-              </Grid>
-            </Grid>
-          </Box>
-        </Fade>
-      </Modal>
       <Modal
         aria-labelledby='transition-modal-title'
         aria-describedby='transition-modal-description'
@@ -541,40 +428,150 @@ const Choice = () => {
           <Box
             boxShadow={3}
             className={classes.paper}
-            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+            style={{ maxHeight: '65vh', overflow: 'auto' }}
           >
             <h2 id='transition-modal-title'>Enter a CSV OR XLSX</h2>
             <Grid item xs={12}>
               <Card style={{ marginBottom: 0, cursor: 'pointer' }}>
                 <section className='container'>
-                  <Dropzone
-                    maxFiles={1}
-                    onDrop={(acceptedFiles) => onDrop(acceptedFiles)}
-                  >
-                    {({ getRootProps, getInputProps }) => (
-                      <section style={{ border: 'solid', marginBottom: '5px' }}>
-                        <div {...getRootProps()}>
-                          <input {...getInputProps()} />
-                          <p>
-                            Drag 'n' drop some files here, or click to select
-                            files
-                          </p>
+                  <form onSubmit={readFile} className='file-upload'>
+                    <input
+                      type='file'
+                      label='Select a CSV file'
+                      onChange={(e) => fileUploader(e)}
+                    ></input>
+                    <Button
+                      type='submit'
+                      fullWidth
+                      variant='contained'
+                      color='primary'
+                      style={{ marginTop: '9px' }}
+                      disabled={selectedFile <= 0}
+                    >
+                      {predicting ? <CircularProgress size={24} /> : 'Upload'}
+                    </Button>
+                  </form>
+                </section>
+                {labelsArray.length > 0 ? (
+                  <section>
+                    <h2>Drop Label</h2>
+                    <div style={{ overflow: 'auto' }}>
+                      {labelsArray.map((plan) => (
+                        <div style={{ display: 'flex' }}>
+                          <input
+                            type='checkbox'
+                            id={plan.value}
+                            onChange={() => labelSelect(plan)}
+                          />
+                          <label
+                            htmlFor={plan.value}
+                            style={{
+                              fontWeight: 'bold',
+                              marginLeft: '5px',
+                              fontSize: '15px',
+                            }}
+                          >
+                            {plan.name}
+                          </label>
+                        </div>
+                      ))}
+                      <section>
+                        <h2>Target Selection</h2>
+                        <div style={{ overflow: 'auto' }}>
+                          {targetsArray.map((tx) => (
+                            <div style={{ display: 'flex' }}>
+                              <input
+                                type='radio'
+                                name='target'
+                                id={tx.value}
+                                value={tx.value}
+                                onChange={(e) => targetS(e)}
+                              />
+                              <label
+                                htmlFor={tx.value}
+                                style={{
+                                  fontWeight: 'bold',
+                                  marginLeft: '5px',
+                                  fontSize: '15px',
+                                }}
+                              >
+                                {tx.name}
+                              </label>
+                            </div>
+                          ))}
                         </div>
                       </section>
-                    )}
-                  </Dropzone>
-                </section>
+                    </div>
+                    <Button
+                      type='submit'
+                      fullWidth
+                      variant='contained'
+                      color='primary'
+                      style={{ marginTop: '9px' }}
+                      disabled={targetSel <= 0}
+                      onClick={submitForm}
+                    >
+                      {predicting ? <CircularProgress size={24} /> : 'Next'}
+                    </Button>
+                  </section>
+                ) : null}
+                {algorithms.length > 0 ? (
+                  <section>
+                    <h2>Select Algorithm :</h2>
+                    <div style={{ overflow: 'auto' }}>
+                      {algorithms.map((alg) => (
+                        <div style={{ display: 'flex' }}>
+                          <input
+                            type='radio'
+                            name='target'
+                            id={alg.name}
+                            value={alg.name}
+                            onChange={(e) => algoSel(e)}
+                          />
+                          <label
+                            htmlFor={alg.name}
+                            style={{
+                              fontWeight: 'bold',
+                              marginLeft: '5px',
+                              fontSize: '15px',
+                            }}
+                          >
+                            {alg.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <section>
+                      <h2>Input Parameters : </h2>
+                      <p>
+                        When entering a number please insert (0-9) numbers only
+                        :
+                      </p>
+                      <div style={{ display: 'flex', overflow: 'auto' }}>
+                        {columnList.map((col, index) => (
+                          <input
+                            type='string'
+                            placeholder={col}
+                            onChange={(value) => colVal(value, index)}
+                          ></input>
+                        ))}
+                      </div>
+                    </section>
+                    <Button
+                      type='submit'
+                      fullWidth
+                      variant='contained'
+                      color='primary'
+                      style={{ marginTop: '9px' }}
+                      disabled={colValue <= 0}
+                      onClick={predictReg}
+                    >
+                      {predicting ? <CircularProgress size={24} /> : 'Predict'}
+                    </Button>
+                  </section>
+                ) : null}
               </Card>
             </Grid>
-            <Button
-              type='button'
-              fullWidth
-              variant='contained'
-              color='primary'
-              onClick={readFile}
-            >
-              {predicting ? <CircularProgress size={24} /> : 'Upload'}
-            </Button>
           </Box>
         </Fade>
       </Modal>
@@ -600,34 +597,78 @@ const Choice = () => {
             <Grid item xs={12}>
               <Card style={{ marginBottom: 0, cursor: 'pointer' }}>
                 <section className='container'>
-                  <Dropzone
-                    maxFiles={1}
-                    onDrop={(acceptedFiles) => onDrop(acceptedFiles)}
-                  >
-                    {({ getRootProps, getInputProps }) => (
-                      <section style={{ border: 'solid', marginBottom: '5px' }}>
-                        <div {...getRootProps()}>
-                          <input {...getInputProps()} />
-                          <p>
-                            Drag 'n' drop some files here, or click to select
-                            files
-                          </p>
+                  <form onSubmit={readFile} className='file-upload'>
+                    <input
+                      type='file'
+                      label='Select a CSV file'
+                      onChange={(e) => fileUploader(e)}
+                    ></input>
+                    <Button
+                      type='submit'
+                      fullWidth
+                      variant='contained'
+                      color='primary'
+                      style={{ marginTop: '9px' }}
+                      disabled={selectedFile <= 0}
+                    >
+                      {'Upload'}
+                    </Button>
+                  </form>
+                </section>
+                {labelsArray.length > 0 ? (
+                  <section>
+                    <h2>Drop Label</h2>
+                    <div style={{ overflow: 'auto' }}>
+                      {labelsArray.map((plan) => (
+                        <div style={{ display: 'flex' }}>
+                          <input
+                            type='checkbox'
+                            id={plan.value}
+                            onChange={() => labelSelect(plan)}
+                          />
+                          <label
+                            htmlFor={plan.value}
+                            style={{
+                              fontWeight: 'bold',
+                              marginLeft: '5px',
+                              fontSize: '15px',
+                            }}
+                          >
+                            {plan.name}
+                          </label>
+                        </div>
+                      ))}
+                      <section>
+                        <h2>Target Selection</h2>
+                        <div style={{ overflow: 'auto' }}>
+                          {targetsArray.map((tx) => (
+                            <div style={{ display: 'flex' }}>
+                              <input
+                                type='radio'
+                                name='target'
+                                id='tx.value'
+                                value={tx.value}
+                                onChange={(e) => targetS(e)}
+                              />
+                              <label
+                                for='tx.value'
+                                style={{
+                                  fontWeight: 'bold',
+                                  marginLeft: '5px',
+                                  fontSize: '15px',
+                                }}
+                              >
+                                {tx.name}
+                              </label>
+                            </div>
+                          ))}
                         </div>
                       </section>
-                    )}
-                  </Dropzone>
-                </section>
+                    </div>
+                  </section>
+                ) : null}
               </Card>
             </Grid>
-            <Button
-              type='button'
-              fullWidth
-              variant='contained'
-              color='primary'
-              //onClick={}
-            >
-              {predicting ? <CircularProgress size={24} /> : 'Upload'}
-            </Button>
           </Box>
         </Fade>
       </Modal>
@@ -655,10 +696,7 @@ const Choice = () => {
             <Grid item xs={12}>
               <Card style={{ marginBottom: 0, cursor: 'pointer' }}>
                 <section className='container'>
-                  <Dropzone
-                    maxFiles={1}
-                    onDrop={(acceptedFiles) => onDrop(acceptedFiles)}
-                  >
+                  <Dropzone onDrop={(acceptedFiles) => onDrop(acceptedFiles)}>
                     {({ getRootProps, getInputProps }) => (
                       <section style={{ border: 'solid', marginBottom: '5px' }}>
                         <div {...getRootProps()}>
