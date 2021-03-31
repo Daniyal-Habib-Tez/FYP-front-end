@@ -358,6 +358,20 @@ export default function Dashboard() {
     <div>
       {/* <GridContainer> */}
       <p className={classes.pageName}>Category Predictor</p>
+      <Container maxWidth='lg' component='div'>
+        <p
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 124,
+            cursor: 'pointer',
+            zIndex: 100000000,
+          }}
+          onClick={() => history.push('/choice')}
+        >
+          Back
+        </p>
+      </Container>
       <Container
         maxWidth='lg'
         component='div'
@@ -372,9 +386,7 @@ export default function Dashboard() {
                 height: 'calc(100% - 30px)',
                 cursor: 'pointer',
               }}
-              // onClick={() => history.push("/admin/project")}
               onClick={handleOpenProject}
-              //onClick={() => history.push('/choice')}
             >
               <CardBody
                 style={{

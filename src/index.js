@@ -25,9 +25,11 @@ import Admin from 'layouts/Admin.js'
 import RTL from 'layouts/RTL.js'
 import Choice from 'layouts/Choice'
 import Regression from 'layouts/Regression'
+import TimeSeries from 'layouts/TimeSeries'
 
 import 'assets/css/material-dashboard-react.css?v=1.9.0'
 import Auth from 'layouts/Auth'
+import Clustering from 'layouts/Clustering'
 
 const hist = createBrowserHistory()
 
@@ -37,6 +39,8 @@ ReactDOM.render(
       <Route path='/admin' component={Admin} />
       <Route path='/choice' component={Choice} />
       <Route path='/regression' component={Regression} />
+      <Route path='/timeseries' component={TimeSeries} />
+      <Route path='/clustering' component={Clustering} />
       <Route path='/auth' component={Auth} />
       <Route path='/rtl' component={RTL} />
       <Redirect from='/' to='/auth/signin' />

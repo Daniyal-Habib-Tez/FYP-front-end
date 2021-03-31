@@ -323,6 +323,7 @@ export default function Project(props) {
                       </section>
                     )}
                   </Dropzone>
+
                   <aside>
                     <h4>Files</h4>
                     <ul>
