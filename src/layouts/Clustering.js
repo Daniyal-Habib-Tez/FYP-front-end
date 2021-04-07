@@ -1,16 +1,17 @@
 import React from 'react'
-import { Box, Container, TextField } from '@material-ui/core'
+import { Container, TextField } from '@material-ui/core'
 import { useHistory } from 'react-router'
 import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid'
 import Card from '@material-ui/core/Card'
-import CardMedia from '@material-ui/core/CardMedia'
 import CardBody from 'components/Card/CardBody'
 import { makeStyles } from '@material-ui/core/styles'
 import styles from 'assets/jss/material-dashboard-react/views/dashboardStyle.js'
 import { CircularProgress } from '@material-ui/core'
 import { useState, useEffect } from 'react'
 import Dropzone, { useDropzone } from 'react-dropzone'
+import { ToastContainer, toast } from 'react-toastify'
+
 import 'react-toastify/dist/ReactToastify.css'
 
 const Clustering = () => {
@@ -25,12 +26,14 @@ const Clustering = () => {
   const [picUploaded, setpicUploaded] = useState('')
   const [givenUrl, setgivenUrl] = useState([])
   const [created, setCreated] = useState('')
+  const [alreadyCreated, setalreadyCreated] = useState('')
   const [msg, setMsg] = useState({
     content: '',
     type: '',
   })
 
   let urls = []
+  toast.configure()
 
   const onDrop = (picture) => {
     setPictures(picture)
@@ -65,6 +68,15 @@ const Clustering = () => {
         if (res.status == 200) {
           setCreated(res)
           setprojectCreated(false)
+          toast.success('Created Succesfully', {
+            position: 'bottom-right',
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          })
           setPredicting(false)
           setMsg({
             content: res.message,
@@ -76,6 +88,15 @@ const Clustering = () => {
       })
       .catch((err) => {
         setPredicting(false)
+        toast.error('Project with this name already existed', {
+          position: 'bottom-right',
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        })
         console.log('error', err)
 
         setMsg({
@@ -94,7 +115,6 @@ const Clustering = () => {
     })
       .then((response) => response.json())
       .then((result) => {
-        setPredicting(false)
         console.log('Success:', result.url)
         console.log('newUrls', urls)
         urls = [...urls, result.url]
@@ -139,6 +159,15 @@ const Clustering = () => {
       .then((res) => {
         console.log('response', res)
         if (res.status == 200) {
+          toast.success('Uploaded Succesfully', {
+            position: 'bottom-right',
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          })
           setPredicting(false)
           setsuccessUrl(false)
           setpicUploaded(res)
@@ -182,6 +211,7 @@ const Clustering = () => {
         console.log('response', res)
         if (res.status == 200) {
           const result = Object.values(res)
+          result.pop()
           setgivenUrl(result)
           console.log('cluster ban gaye', result, givenUrl)
           setUpLoading(false)
@@ -196,6 +226,7 @@ const Clustering = () => {
       .catch((err) => {
         setPredicting(false)
         console.log('error', err)
+        setalreadyCreated(err.message)
 
         setMsg({
           content: err.message,
@@ -266,6 +297,8 @@ const Clustering = () => {
                 {!!created ? (
                   <section>
                     <h3 className={classes.cardTitle}>{projectName}</h3>
+                    <small>{created.message}</small>
+
                     <Dropzone onDrop={(acceptedFiles) => onDrop(acceptedFiles)}>
                       {({ getRootProps, getInputProps }) => (
                         <section

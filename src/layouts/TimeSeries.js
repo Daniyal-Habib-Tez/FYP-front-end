@@ -256,7 +256,7 @@ const TimeSeries = () => {
       </Container>
       <Container style={{}}>
         <h2 id='transition-modal-title' style={{ textAlign: 'center' }}>
-          Enter a CSV OR XLSX
+          Enter a CSV
         </h2>
         <Card
           style={{

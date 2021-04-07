@@ -6,7 +6,7 @@ import Button from '@material-ui/core/Button'
 import Grid from '@material-ui/core/Grid'
 import Card from '@material-ui/core/Card'
 import CircularProgress from '@material-ui/core/Card'
-
+import readXlsxFile from 'read-excel-file'
 import GridItem from 'components/Grid/GridItem.js'
 
 import { makeStyles } from '@material-ui/core/styles'
@@ -52,9 +52,16 @@ const Regression = () => {
   const classes = useStyles()
   let errorMsg = ''
   const fileUploader = (e) => {
-    console.log('file uploader input', e.target.files[0])
+    console.log(
+      'file uploader input',
+      e.target.files[0],
+      typeof e.target.files[0]
+    )
     setSelectedFile(e.target.files)
   }
+  useEffect(() => {
+    console.log('file upload', selectedFile)
+  }, [selectedFile])
 
   const targetS = (e) => {
     console.log('target selected item', e.target.value, typeof e.target.value)
@@ -83,6 +90,7 @@ const Regression = () => {
       errorMsg = ''
       var reader = new FileReader()
       reader.readAsText(selectedFile[0])
+      console.log('reader', reader)
       reader.onload = () => {
         extractHeader(reader)
       }
@@ -143,6 +151,7 @@ const Regression = () => {
   }
   const submitForm = async (e) => {
     e.preventDefault()
+    setPredicting(true)
     console.log('clicked')
     console.log(selectedFile, selectedLabelsArray, targetSel, typeof targetSel)
     let formData = new FormData()
@@ -162,10 +171,12 @@ const Regression = () => {
       .then((response) => response.json())
       .then((result) => {
         console.log('agaya response ', result)
+        setPredicting(false)
         getAlgosreg(result)
       })
       .catch((err) => {
         console.log('error', err)
+        setPredicting(false)
 
         setMsg({
           content: err.message,
@@ -264,7 +275,7 @@ const Regression = () => {
       </Container>
       <Container style={{}}>
         <h2 id='transition-modal-title' style={{ textAlign: 'center' }}>
-          Enter a CSV OR XLSX
+          Enter a CSV
         </h2>
         <Card
           style={{

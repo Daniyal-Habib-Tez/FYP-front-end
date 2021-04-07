@@ -6,10 +6,10 @@ import GridItem from 'components/Grid/GridItem.js'
 import Card from 'components/Card/Card.js'
 import CardHeader from 'components/Card/CardHeader.js'
 import ImageUploader from 'react-images-upload'
-
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 import AddIcon from '@material-ui/icons/Add'
 import DeleteIcon from '@material-ui/icons/Delete'
-import TranslateIcon from '@material-ui/icons/Translate'
 import TrainIcon from '@material-ui/icons/Train'
 import CheckBoxIcon from '@material-ui/icons/CheckBox'
 import CheckBoxOutlineBlankIcon from '@material-ui/icons/CheckBoxOutlineBlank'
@@ -50,6 +50,7 @@ export default function Dashboard() {
     content: '',
     type: '',
   })
+  toast.configure()
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -178,19 +179,8 @@ export default function Dashboard() {
   }
 
   const trainProject = (project) => {
-    // let cats = [
-    //   project?.categories[0].category_name,
-    //   project?.categories[1].category_name,
-    // ]
     let cats = project?.categories.map((cat) => cat.category_name)
     console.log('cats', cats)
-
-    // for (let category of project?.categories) {
-    //   cats.push(category.category_name)
-    //   console.log('cats', cats)
-    //   return cats
-    // }
-
     setLoading(true)
     fetch('http://localhost:5000/api/train', {
       method: 'POST',
@@ -244,6 +234,15 @@ export default function Dashboard() {
       .then((response) => response.json())
       .then((result) => {
         console.log('Success:', result.url)
+        toast.success('Uploaded Succesfully', {
+          position: 'bottom-right',
+          autoClose: 4000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        })
         predict(result.url)
       })
       .catch((err) => {
@@ -325,6 +324,15 @@ export default function Dashboard() {
         console.log('response', res)
         if (res.status == 200) {
           setPredicting(false)
+          toast.success('Created Succesfully', {
+            position: 'bottom-right',
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          })
           history.push({
             pathname: '/admin/project',
             state: {
@@ -619,7 +627,7 @@ export default function Dashboard() {
           <Box
             boxShadow={3}
             className={classes.paper}
-            style={{ maxHeight: '65vh', overflowY: 'auto' }}
+            style={{ maxHeight: '65vh', overflowY: 'auto', maxWidth: '65vw' }}
           >
             <h2 id='transition-modal-title'>Create Project</h2>
             <Grid container spacing={2} style={{ marginBottom: 10 }}>

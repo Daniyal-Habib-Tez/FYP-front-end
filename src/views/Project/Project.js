@@ -5,6 +5,8 @@ import { makeStyles } from '@material-ui/core/styles'
 import GridItem from 'components/Grid/GridItem.js'
 import Card from 'components/Card/Card.js'
 import CardHeader from 'components/Card/CardHeader.js'
+import { ToastContainer, toast } from 'react-toastify'
+
 import ImageUploader from 'react-images-upload'
 import Dropzone, { useDropzone } from 'react-dropzone'
 import AddIcon from '@material-ui/icons/Add'
@@ -41,6 +43,8 @@ export default function Project(props) {
   )
   // const [urls, setUrls] = useState([]);
   let urls = []
+  toast.configure()
+
   const [msg, setMsg] = useState({
     content: '',
     type: '',
@@ -58,7 +62,7 @@ export default function Project(props) {
       .then((res) => res.json())
       .then((res) => {
         if (res.status == 200) {
-          history.push('/admin')
+          history.push('/admin/dashboard')
           setMsg({
             content: res.message,
             type: 'success',
@@ -143,6 +147,15 @@ export default function Project(props) {
       .then((res) => {
         console.log('response', res)
         if (res.status == 200) {
+          toast.success('Uploaded Succesfully', {
+            position: 'bottom-right',
+            autoClose: 4000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+          })
           setUploading(
             Array(props.location.state.categories.length).fill(false)
           )
@@ -183,9 +196,9 @@ export default function Project(props) {
           cursor: 'pointer',
           zIndex: 100000000,
         }}
-        onClick={() => history.push('/admin')}
+        onClick={() => history.push('/admin/dashboard')}
       >
-        Home
+        Back
       </p>
 
       {/* <GridContainer> */}
