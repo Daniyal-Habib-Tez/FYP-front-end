@@ -71,7 +71,7 @@ const Choice = () => {
         {/* <GridContainer> */}
         <p className={classes.pagename} style={{ fontSize: '20px' }}>
           {' '}
-          Category Predictor{' '}
+          Predict Tool{' '}
         </p>
       </Container>
       <Button

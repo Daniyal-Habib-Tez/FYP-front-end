@@ -45,6 +45,10 @@ const Clustering = () => {
   }, [pictures])
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop })
 
+  function refreshPage() {
+    window.location.reload(false)
+  }
+
   const onChange = (e) => {
     if (e.target.name === 'projectName') {
       setProjectName(e.target.value)
@@ -251,6 +255,18 @@ const Clustering = () => {
           onClick={() => history.push('/choice')}
         >
           Back
+        </p>
+        <p
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 174,
+            cursor: 'pointer',
+            zIndex: 100000000,
+          }}
+          onClick={refreshPage}
+        >
+          Create Project Again
         </p>
       </Container>
       <Container>

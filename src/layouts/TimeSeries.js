@@ -8,6 +8,7 @@ import Grid from '@material-ui/core/Grid'
 import Card from '@material-ui/core/Card'
 import { CircularProgress } from '@material-ui/core'
 import { Line } from 'react-chartjs-2'
+import * as XLSX from 'xlsx'
 import { FormHelperText } from '@material-ui/core'
 import Select from '@material-ui/core/Select'
 import InputLabel from '@material-ui/core/InputLabel'
@@ -58,20 +59,68 @@ const TimeSeries = () => {
   useEffect(() => {
     console.log('hello', targetSel)
   }, [targetSel])
+  function refreshPage() {
+    window.location.reload(false)
+  }
 
   const readFile = (e) => {
     e.preventDefault()
+
     setUploadForm(false)
     if (!selectedFile[0]) {
       errorMsg = 'Please select a file first'
     } else {
       errorMsg = ''
       var reader = new FileReader()
-      reader.readAsText(selectedFile[0])
-      reader.onload = () => {
-        extractHeader(reader)
+      if (selectedFile[0].name.includes('csv')) {
+        console.log('chl gaya yahan tk')
+        reader.readAsText(selectedFile[0])
+        console.log('reader', reader)
+        reader.onload = () => {
+          extractHeader(reader)
+        }
+      } else {
+        console.log('xls file hai')
+        console.log('agaya yahan tk')
+        reader.onload = (evt) => {
+          // evt = on_file_select event
+          /* Parse data */
+          const bstr = evt.target.result
+          const wb = XLSX.read(bstr, { type: 'binary' })
+          /* Get first worksheet */
+          const wsname = wb.SheetNames[0]
+          const ws = wb.Sheets[wsname]
+          /* Convert array of arrays */
+          const data = XLSX.utils.sheet_to_csv(ws, { header: 1 })
+          /* Update state */
+          console.log('Data>>>' + data, typeof data)
+          let arr = [data]
+          console.log('array', arr[0].split('\n')[0].split(','))
+          extractRows(arr)
+        }
+        reader.readAsBinaryString(selectedFile[0])
+        console.log('reader', reader)
       }
     }
+  }
+  const extractRows = (r) => {
+    let labels = []
+    let targets = []
+    const roww = r[0].split('\n')[0].split(',')
+    roww.forEach((item) => {
+      labels.push({
+        name: item,
+        value: item + '1',
+      })
+      targets.push({
+        name: item,
+        value: item,
+      })
+    })
+    console.log('roowwwww', roww)
+
+    setLabelsArray(labels)
+    setTargetsArray(targets)
   }
   const extractHeader = (reader) => {
     let labels = []
@@ -252,6 +301,18 @@ const TimeSeries = () => {
           onClick={() => history.push('/choice')}
         >
           Back
+        </p>
+        <p
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 174,
+            cursor: 'pointer',
+            zIndex: 100000000,
+          }}
+          onClick={refreshPage}
+        >
+          Predict Again
         </p>
       </Container>
       <Container style={{}}>
